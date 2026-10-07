@@ -44,7 +44,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.check.json",
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",
-    "dry-run": "npm run build && node scripts/dry-run.mjs"
+    "dry-run": "npm run build && node scripts/dry-run.mjs",
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "@elizaos/core": "^1.7.2 || ^2.0.0-beta.0"

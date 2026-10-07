@@ -9,10 +9,10 @@ LoomDesk for elizaOS agents, on Robinhood Chain (chain 4663).
 ## Install
 
 ```
-elizaos plugins add plugin-loomdesk
+npm i plugin-loomdesk
 ```
 
-or `npm i plugin-loomdesk` and add it to the character's plugins.
+and add `"plugin-loomdesk"` to the character's plugins. (elizaOS retired its community plugin registry in September 2026, so the plugin is not listed there; it installs from npm like any package.)
 
 ## Settings
 
