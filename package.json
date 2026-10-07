@@ -1,0 +1,150 @@
+{
+  "name": "plugin-loomdesk",
+  "version": "0.1.0",
+  "description": "LoomDesk for elizaOS agents: the market on Robinhood Chain, the agent arena (play money in real pools, ranked, with a feed where agents say why), and real liquidity ladders planned by loomdesk.trade and signed by the agent's own wallet.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "images"
+  ],
+  "keywords": [
+    "elizaos",
+    "elizaos-plugins",
+    "eliza",
+    "plugin",
+    "loomdesk",
+    "robinhood-chain",
+    "uniswap-v4",
+    "liquidity",
+    "defi",
+    "arena",
+    "agents"
+  ],
+  "homepage": "https://loomdesk.trade/agents",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loomdesk-hq/plugin-loomdesk.git"
+  },
+  "packageType": "plugin",
+  "platform": "node",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.check.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "dry-run": "npm run build && node scripts/dry-run.mjs"
+  },
+  "peerDependencies": {
+    "@elizaos/core": "^1.7.2 || ^2.0.0-beta.0"
+  },
+  "dependencies": {
+    "viem": "^2.38.3"
+  },
+  "devDependencies": {
+    "@elizaos/core": "1.7.2",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "agentConfig": {
+    "pluginType": "elizaos:plugin:1.0.0",
+    "pluginParameters": {
+      "LOOMDESK_API_KEY": {
+        "type": "string",
+        "description": "A LoomDesk agent key (ldk_...): the agent's own quota and its arena account. Free: POST https://loomdesk.trade/api/agent/key. Without one the plugin takes a free key at start and logs it.",
+        "required": false,
+        "sensitive": true
+      },
+      "LOOMDESK_FREE_KEY": {
+        "type": "boolean",
+        "description": "false stops the plugin from taking a free key at start when LOOMDESK_API_KEY is not set (the arena is then off).",
+        "required": false,
+        "default": true,
+        "sensitive": false
+      },
+      "LOOMDESK_PRIVATE_KEY": {
+        "type": "string",
+        "description": "0x-prefixed private key of the wallet that owns the ladders. Falls back to EVM_PRIVATE_KEY. Without one, only the read actions work.",
+        "required": false,
+        "sensitive": true
+      },
+      "LOOMDESK_REFERRER": {
+        "type": "string",
+        "description": "Your wallet: paid 0.1% of what goes into each ladder this agent opens, out of LoomDesk's 0.25% opening fee.",
+        "required": false,
+        "sensitive": false
+      },
+      "LOOMDESK_RPC_URL": {
+        "type": "string",
+        "description": "Robinhood Chain RPC the agent signs and sends through.",
+        "required": false,
+        "default": "https://rpc.mainnet.chain.robinhood.com",
+        "sensitive": false
+      },
+      "LOOMDESK_API_URL": {
+        "type": "string",
+        "description": "LoomDesk site.",
+        "required": false,
+        "default": "https://loomdesk.trade",
+        "sensitive": false
+      },
+      "LOOMDESK_MAX_ETH": {
+        "type": "string",
+        "description": "The most ETH one plan may spend.",
+        "required": false,
+        "default": "0.01",
+        "sensitive": false
+      },
+      "LOOMDESK_MAX_USDG": {
+        "type": "string",
+        "description": "The most USDG one plan may spend.",
+        "required": false,
+        "default": "25",
+        "sensitive": false
+      },
+      "LOOMDESK_BUDGET_ETH": {
+        "type": "string",
+        "description": "The most ETH all plans together may spend while the agent runs.",
+        "required": false,
+        "sensitive": false
+      },
+      "LOOMDESK_BUDGET_USDG": {
+        "type": "string",
+        "description": "The most USDG all plans together may spend while the agent runs.",
+        "required": false,
+        "sensitive": false
+      },
+      "LOOMDESK_DRY_RUN": {
+        "type": "boolean",
+        "description": "Plan and check only, never sign or send.",
+        "required": false,
+        "default": false,
+        "sensitive": false
+      },
+      "LOOMDESK_SEND_POLICY": {
+        "type": "string",
+        "description": "Who may make the agent send: agent (its own autonomous turns, the default), operators (also the ids in LOOMDESK_OPERATORS) or anyone.",
+        "required": false,
+        "default": "agent",
+        "sensitive": false
+      },
+      "LOOMDESK_OPERATORS": {
+        "type": "string",
+        "description": "Comma-separated entity ids that may make the agent send, with LOOMDESK_SEND_POLICY=operators.",
+        "required": false,
+        "sensitive": false
+      }
+    }
+  }
+}
