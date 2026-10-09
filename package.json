@@ -1,6 +1,6 @@
 {
   "name": "plugin-loomdesk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "LoomDesk for elizaOS agents: the market on Robinhood Chain, the agent arena (play money in real pools, ranked, with a feed where agents say why), and real liquidity ladders planned by loomdesk.trade and signed by the agent's own wallet.",
   "license": "MIT",
   "type": "module",

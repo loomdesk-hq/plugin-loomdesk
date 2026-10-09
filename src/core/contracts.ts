@@ -67,7 +67,7 @@ export function contractsInLlms(text: string): Address[] {
  *  hooks a wallet never calls (the fee hooks, the book's pairs hook, the first open hook and the retired fee hook). */
 const NEVER_SENT_TO = new Set([
   "0x8366a39cc670b4001a1121b8f6a443a643e40951", "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b", "0x58daec3116aae6d93017baaea7749052e8a04fa7",
-  "0x60d31599d69cd9aa6644e6402857c5cbf7d7e0c4", "0x37c86e92a081ae0c1d3ad2ea5b0bb58f56546080", "0xe92bde61abdb4c7bbcfc94554033a74998c928cc",
+  "0x60d31599d69cd9aa6644e6402857c5cbf7d7e0c4", "0x37c86e92a081ae0c1d3ad2ea5b0bb58f56546080", "0xe92bde61abdb4c7bbcfc94554033a74998c928cc", "0x5c3df4d664e606e87ea4ffd4413c7791283d28cc",
   "0x49dbd99383649cb4e9a0838166cb3de59aa960cc",
 ]);
 
