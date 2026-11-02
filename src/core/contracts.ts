@@ -1,4 +1,3 @@
-// Copied from core/src/contracts.ts by scripts/sync-core.mjs. Edit it there, then run npm run sync at the repo root.
 // The contracts a LoomDesk plan may send to, shipped with the plugin rather than read from the server at startup: a
 // list the server hands over could be changed by whoever controls the server, so it could not be the check on what the
 // server plans. Taken from https://loomdesk.trade/llms.txt ("Contracts (Robinhood Chain, 4663)") on 2026-10-06, with
@@ -36,8 +35,11 @@ export const LOOMDESK = {
   priceSetter: a("0xE1394FBDFaA0186EDA5a999f4076002179100d2B"),
 } as const;
 
-/** The swap router a plan_swap may name: Nordstern's, the same one LoomZap swaps through (LoomZap.router(), fixed). */
-export const KNOWN_ROUTERS: Address[] = [a("0x603206D6105217DD972E4Ab30676A220CA393346")];
+/** The swap router a plan_swap names: Uniswap's Universal Router on the chain (LoomDesk's own route, since 2026-10-11;
+ *  Nordstern's router is off for good). Its calls are decoded command by command (guard.ts routerProblem). */
+export const KNOWN_ROUTERS: Address[] = [a("0x204FAca1764B154221e35c0d20aBb3c525710498")];
+/** Permit2: a swap approves the token to it once, then lets the router pull through it for the swap alone. */
+export const PERMIT2: Address = a("0x000000000022D473030F116dDEE9F6B43aC78BA3");
 
 /** What LoomZap.zapBuild's `opening.hook` may name: nothing, the price setter (an empty pool put back at the market)
  *  or a LoomDesk hook (a pool opened in the same transaction). */
@@ -50,7 +52,7 @@ export const ALL_LADDERS: Address[] = [LOOMDESK.ladder, ...LOOMDESK.ladderLegacy
 
 /** Every address this plugin knows as LoomDesk's (and USDG and the router), lower case. */
 export function knownAddresses(extraLadders: Address[] = []): Set<string> {
-  return new Set([...ALL_LADDERS, ...extraLadders, LOOMDESK.zap, LOOMDESK.pilotGas, LOOMDESK.openHook, LOOMDESK.fullHook, LOOMDESK.priceSetter, USDG, ...KNOWN_ROUTERS].map((x) => x.toLowerCase()));
+  return new Set([...ALL_LADDERS, ...extraLadders, LOOMDESK.zap, LOOMDESK.pilotGas, LOOMDESK.openHook, LOOMDESK.fullHook, LOOMDESK.priceSetter, USDG, ...KNOWN_ROUTERS, PERMIT2].map((x) => x.toLowerCase()));
 }
 
 /** The addresses in llms.txt's contracts section. */
@@ -67,7 +69,7 @@ export function contractsInLlms(text: string): Address[] {
  *  hooks a wallet never calls (the fee hooks, the book's pairs hook, the first open hook and the retired fee hook). */
 const NEVER_SENT_TO = new Set([
   "0x8366a39cc670b4001a1121b8f6a443a643e40951", "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b", "0x58daec3116aae6d93017baaea7749052e8a04fa7",
-  "0x60d31599d69cd9aa6644e6402857c5cbf7d7e0c4", "0x37c86e92a081ae0c1d3ad2ea5b0bb58f56546080", "0xe92bde61abdb4c7bbcfc94554033a74998c928cc", "0x5c3df4d664e606e87ea4ffd4413c7791283d28cc",
+  "0x60d31599d69cd9aa6644e6402857c5cbf7d7e0c4", "0x37c86e92a081ae0c1d3ad2ea5b0bb58f56546080", "0xe92bde61abdb4c7bbcfc94554033a74998c928cc",
   "0x49dbd99383649cb4e9a0838166cb3de59aa960cc",
 ]);
 

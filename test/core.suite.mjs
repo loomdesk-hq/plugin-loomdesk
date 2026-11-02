@@ -1,8 +1,7 @@
-// Copied from core/test/core.suite.mjs by scripts/sync-core.mjs. Edit it there, then run npm run sync at the repo root.
 // The sending rules, tested the same way in every package against its own build of the shared code: LoomDesk's API
 // is a fake fetch that answers with plans made here, and the wallet is a fake Sender that records what it was asked
 // to send. Nothing touches a network or a chain.
-import { encodeFunctionData, parseEther, parseUnits, zeroAddress } from "viem";
+import { encodeAbiParameters, encodeFunctionData, parseAbiParameters, parseEther, parseUnits, toHex, zeroAddress } from "viem";
 
 export const OWNER = "0x1111111111111111111111111111111111111111";
 export const REFERRER = "0x2222222222222222222222222222222222222222";
@@ -307,18 +306,50 @@ export function coreSuite(test, assert, core) {
     assert.equal(out.alreadyOpen, true);
   });
 
-  test("swap: only through the router LoomDesk's zap uses, approving it for no more than asked", async () => {
+  test("swap: only through the Universal Router, its commands read, the token approved to Permit2 for no more than asked, nothing left in the router", async () => {
     const router = core.KNOWN_ROUTERS[0];
+    const MSG_SENDER = "0x0000000000000000000000000000000000000001", ADDRESS_THIS = "0x0000000000000000000000000000000000000002";
+    const urAbi = [{ name: "execute", type: "function", stateMutability: "payable", inputs: [{ type: "bytes", name: "commands" }, { type: "bytes[]", name: "inputs" }, { type: "uint256", name: "deadline" }], outputs: [] }];
+    const exec = (cmds, inputs) => encodeFunctionData({ abi: urAbi, functionName: "execute", args: [toHex(new Uint8Array(cmds)), inputs, 1n] });
+    const path = `0x${core.USDG.slice(2)}000064${core.WETH.slice(2)}`;
+    const v3 = (r, payerIsUser = true) => encodeAbiParameters(parseAbiParameters("address recipient, uint256 amountIn, uint256 amountOutMin, bytes path, bool payerIsUser, uint256[] minHopPriceX36"), [r, parseUnits("5", 6), 1n, path, payerIsUser, []]);
+    const unwrap = (r) => encodeAbiParameters(parseAbiParameters("address recipient, uint256 amountMin"), [r, 1n]);
+    const pull = (r) => encodeAbiParameters(parseAbiParameters("address token, address recipient, uint160 amount"), [core.USDG, r, parseUnits("5", 6)]);
+    const permit2Approve = (spender, amount) => ({ step: "permit", to: core.PERMIT2, data: encodeFunctionData({ abi: core.permit2Abi, functionName: "approve", args: [core.USDG, spender, amount, 1_900_000_000] }), value: "0", gas: "60000" });
     const plan = (r, txs) => ({ chainId: 4663, router: r, from: { address: core.USDG, symbol: "USDG", decimals: 6 }, transactions: txs, check: ok(), ifItReverts });
-    const route = (to) => ({ step: "swap", to, data: "0x12345678", value: "0", gas: "400000" });
+    const route = (to, data, value = "0") => ({ step: "swap", to, data, value, gas: "400000" });
+    // the plan as the site makes it: approve to Permit2, Permit2 lets the router pull, swap to the router, unwrap to the wallet
+    const good = exec([0x00, 0x0c], [v3(ADDRESS_THIS), unwrap(MSG_SENDER)]);
     let s = fakeSender();
-    let out = await desk(fakeApi({ plans: [plan(router, [approveTx(core, core.USDG, router, parseUnits("5", 6)), route(router)])] })).swap(s, { from: "USDG", to: "ETH", amount: "5" });
+    let out = await desk(fakeApi({ plans: [plan(router, [approveTx(core, core.USDG, core.PERMIT2, parseUnits("5", 6)), permit2Approve(router, parseUnits("5", 6)), route(router, good)])] })).swap(s, { from: "USDG", to: "ETH", amount: "5" });
     assert.equal(out.ok, true, JSON.stringify(out));
-    assert.equal(s.sent.length, 2);
+    assert.equal(s.sent.length, 3);
+    // another router: refused before anything is read
     s = fakeSender();
-    out = await desk(fakeApi({ plans: [plan(STRANGER, [route(STRANGER)])] })).swap(s, { from: "USDG", to: "ETH", amount: "5" });
+    out = await desk(fakeApi({ plans: [plan(STRANGER, [route(STRANGER, good)])] })).swap(s, { from: "USDG", to: "ETH", amount: "5" });
     assert.match(out.refused, /router/);
     assert.equal(s.sent.length, 0);
+    // a route that cannot be read, one that pays a stranger, one that leaves the output in the router, one that pulls
+    // to the router and stops, a command the router reads as a bridge deposit, ETH sent that nothing spends
+    for (const [data, value, why] of [
+      ["0x12345678", "0", /cannot be read/],
+      [exec([0x00, 0x0c], [v3(ADDRESS_THIS), unwrap(STRANGER)]), "0", /unwrapping pays 0x3333/],
+      [exec([0x00], [v3(ADDRESS_THIS)]), "0", /leaves WETH in the router/],
+      [exec([0x02], [pull(ADDRESS_THIS)]), "0", /leaves 0x5fc5/i],
+      [exec([0x40, 0x0c], [v3(ADDRESS_THIS), unwrap(MSG_SENDER)]), "0", /never use \(0x40\)/],
+      [good, "1", /ETH that nothing in it spends/],
+    ]) {
+      s = fakeSender();
+      out = await desk(fakeApi({ plans: [plan(router, [approveTx(core, core.USDG, core.PERMIT2, parseUnits("5", 6)), route(router, data, value)])] })).swap(s, { from: "USDG", to: "ETH", amount: "5" });
+      assert.match(out.refused ?? "", why, JSON.stringify(out));
+      assert.equal(s.sent.length, 0);
+    }
+    // Permit2 may only let the router pull, and no more than asked
+    s = fakeSender();
+    out = await desk(fakeApi({ plans: [plan(router, [approveTx(core, core.USDG, core.PERMIT2, parseUnits("5", 6)), permit2Approve(STRANGER, parseUnits("5", 6)), route(router, good)])] })).swap(s, { from: "USDG", to: "ETH", amount: "5" });
+    assert.match(out.refused ?? "", /not the swap's router/);
+    out = await desk(fakeApi({ plans: [plan(router, [approveTx(core, core.USDG, core.PERMIT2, parseUnits("5", 6)), permit2Approve(router, parseUnits("6", 6)), route(router, good)])] })).swap(fakeSender(), { from: "USDG", to: "ETH", amount: "5" });
+    assert.match(out.refused ?? "", /more than was asked/);
   });
 
   test("API: one wait on 429 with a short Retry-After, then the server's words", async () => {

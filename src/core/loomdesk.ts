@@ -1,4 +1,3 @@
-// Copied from core/src/loomdesk.ts by scripts/sync-core.mjs. Edit it there, then run npm run sync at the repo root.
 // LoomDesk for an agent framework: reads the market, asks loomdesk.trade for plans, and sends them from the agent's own
 // wallet by the rules every LoomDesk plugin keeps:
 //   - nothing is sent unless LoomDesk's own simulation of the plan passed (check.ok); a plan it could not simulate is
@@ -12,7 +11,7 @@
 import { formatEther, formatUnits, getAddress, isAddress, parseEther, parseUnits, zeroAddress, type Address, type Hex } from "viem";
 import { LoomDeskApi, type ApiOptions, type Plan } from "./api.js";
 import { CHAIN_ID, explorerTx } from "./chain.js";
-import { ALL_LADDERS, KNOWN_ROUTERS, LOOMDESK, OPEN_FEE_MAX, USDG, USDG_DECIMALS, WETH, contractsInLlms, unknownContracts } from "./contracts.js";
+import { ALL_LADDERS, KNOWN_ROUTERS, LOOMDESK, OPEN_FEE_MAX, PERMIT2, USDG, USDG_DECIMALS, WETH, contractsInLlms, unknownContracts } from "./contracts.js";
 import { GuardError, reasonOf, revertSelector, vetPlan, type CheckedTx, type Role, type Rules } from "./guard.js";
 
 /** The agent's wallet, as each framework gives it. */
@@ -279,7 +278,8 @@ export class LoomDesk {
       const approve = new Map<string, bigint>();
       if (!fromEth && isAddress(src, { strict: false })) approve.set(low(src), parseUnits(a.amount, same(src, USDG) ? USDG_DECIMALS : await s.decimals(getAddress(low(src)) as Address)));
       return {
-        ...this.base(s, [[getAddress(low(router)) as Address, "router"]], [router]),
+        // the router's calls are read command by command; the token is approved to Permit2, which lets the router pull
+        ...this.base(s, [[getAddress(low(router)) as Address, "router"], [PERMIT2, "permit2"]], [router, PERMIT2]),
         approve,
         eth: fromEth ? parseEther(a.amount) : 0n,
         spend: { ETH: fromEth || same(src, WETH) ? parseUnits(a.amount, 18) : 0n, USDG: same(src, USDG) ? parseUnits(a.amount, USDG_DECIMALS) : 0n },
